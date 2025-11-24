@@ -6,7 +6,7 @@
     <p class="text-muted">Manage gym members and their information</p>
 </div>
 
-<!-- Search Bar (VULNERABLE TO SQL INJECTION!) -->
+<!-- Search Bar -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ url_for('members') }}" class="row g-3">
@@ -58,8 +58,8 @@
                             </td>
                             <td>{{ member.join_date }}</td>
                             <td>
-                                <!-- VULNERABILITY: XSS - Notes displayed without escaping! -->
-                                {{ member.notes|safe }}
+                                <!-- FIXED: Notes are escaped, XSS is prevented -->
+                                {{ member.notes }}
                             </td>
                         </tr>
                         {% endfor %}
