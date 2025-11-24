@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    <p class="text-muted">Welcome to GymFit Management System</p>
+</div>
+
+<div class="row g-4">
+    <!-- Members Card -->
+    <div class="col-md-6">
+        <div class="stat-card blue">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-white-50 mb-2">Total Members</h6>
+                    <h2 class="mb-0">{{ members_count }}</h2>
+                </div>
+                <i class="bi bi-people" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+            <a href="{{ url_for('members') }}" class="btn btn-light btn-sm mt-3">
+                View Members <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Trainers Card -->
+    <div class="col-md-6">
+        <div class="stat-card green">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-white-50 mb-2">Total Trainers</h6>
+                    <h2 class="mb-0">{{ trainers_count }}</h2>
+                </div>
+                <i class="bi bi-person-badge" style="font-size: 3rem; opacity: 0.5;"></i>
+            </div>
+            <a href="{{ url_for('trainers') }}" class="btn btn-light btn-sm mt-3">
+                View Trainers <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-lightning"></i> Quick Actions</h5>
+                <div class="d-flex gap-2 mt-3">
+                    <a href="{{ url_for('members') }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus"></i> Add Member
+                    </a>
+                    <a href="{{ url_for('trainers') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-clipboard-data"></i> View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
