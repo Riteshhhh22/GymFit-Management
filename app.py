@@ -119,20 +119,24 @@ def add_member():
     return redirect(url_for('members'))
 
 # ==========================================
-# VULNERABILITY 4: IDOR - Insecure Direct Object Reference
+# SECURED! Profile Route with IDOR Fix
 # ==========================================
 @app.route('/profile/<int:user_id>')
 def profile(user_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    # VULNERABLE: No authorization check!
+    # SECURE: Only profile owner or admin can view profile
+    if session.get('role') != 'admin' and session.get('user_id') != user_id:
+        flash('Unauthorized access!', 'danger')
+        return redirect(url_for('dashboard'))
+
     conn = get_db_connection()
     user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
     if not user:
         flash('User not found!', 'danger')
         return redirect(url_for('dashboard'))
-    member = conn.execute('SELECT * FROM members WHERE email LIKE ?',
+    member = conn.execute('SELECT * FROM members WHERE email LIKE ?', 
                           (f"%{user['username']}%",)).fetchone()
     conn.close()
     return render_template('profile.html', user=user, member=member)
