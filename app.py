@@ -13,27 +13,28 @@ def get_db_connection():
     return conn
 
 # ==========================================
-# VULNERABILITY 1: SQL INJECTION in Login
+# FIXED! SQL INJECTION in Login Route
 # ==========================================
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        
+
         # Hash password with MD5 (VULNERABLE: Weak hashing!)
         hashed_password = hashlib.md5(password.encode()).hexdigest()
-        
-        # VULNERABLE: Direct string concatenation - SQL Injection possible!
-        query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{hashed_password}'"
-        
+
+        # FIXED: Use parameterized query to prevent SQL Injection
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute(query)
+        cursor.execute(
+            "SELECT * FROM users WHERE username = ? AND password = ?",
+            (username, hashed_password)
+        )
         user = cursor.fetchone()
         conn.close()
-        
+
         if user:
             # VULNERABILITY 2: BROKEN AUTHENTICATION
             # Weak session management - predictable session tokens
@@ -41,12 +42,13 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             session['logged_in'] = True
-            
-            flash(f'Welcome back, {user["username"]}!', 'success')
+
+            # Fix f-string quoting issue
+            flash(f"Welcome back, {user['username']}!", 'success')
             return redirect(url_for('dashboard'))
         else:
             flash('Invalid credentials!', 'danger')
-    
+
     return render_template('login.html')
 
 # ==========================================
@@ -57,41 +59,37 @@ def dashboard():
     if not session.get('logged_in'):
         flash('Please login first!', 'warning')
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
-    
     # Get statistics
     members_count = conn.execute('SELECT COUNT(*) as count FROM members').fetchone()['count']
     trainers_count = conn.execute('SELECT COUNT(*) as count FROM trainers').fetchone()['count']
-    
     conn.close()
-    
-    return render_template('dashboard.html', 
-                         members_count=members_count,
-                         trainers_count=trainers_count)
+
+    return render_template('dashboard.html',
+                           members_count=members_count,
+                           trainers_count=trainers_count)
 
 # ==========================================
-# VULNERABILITY 3: XSS in Member Management
+# FIXED! SQL INJECTION in Member Search
 # ==========================================
 @app.route('/members')
 def members():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
-    
-    # Search functionality - VULNERABLE to SQL Injection!
     search = request.args.get('search', '')
-    
+
     if search:
-        # VULNERABLE: SQL Injection in search
-        query = f"SELECT * FROM members WHERE name LIKE '%{search}%' OR email LIKE '%{search}%'"
-        members = conn.execute(query).fetchall()
+        # FIXED: Parameterized query for search
+        query = "SELECT * FROM members WHERE name LIKE ? OR email LIKE ?"
+        search_term = f"%{search}%"
+        members = conn.execute(query, (search_term, search_term)).fetchall()
     else:
         members = conn.execute('SELECT * FROM members').fetchall()
-    
+
     conn.close()
-    
     # Members data will be displayed without escaping (XSS vulnerability in template)
     return render_template('members.html', members=members, search=search)
 
@@ -102,13 +100,13 @@ def members():
 def add_member():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     name = request.form['name']
     email = request.form['email']
     phone = request.form['phone']
     membership_type = request.form['membership_type']
     notes = request.form['notes']  # VULNERABLE: No XSS protection!
-    
+
     conn = get_db_connection()
     conn.execute('''
         INSERT INTO members (name, email, phone, membership_type, join_date, notes)
@@ -116,7 +114,7 @@ def add_member():
     ''', (name, email, phone, membership_type, notes))
     conn.commit()
     conn.close()
-    
+
     flash('Member added successfully!', 'success')
     return redirect(url_for('members'))
 
@@ -127,23 +125,16 @@ def add_member():
 def profile(user_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     # VULNERABLE: No authorization check!
-    # Any logged-in user can view any profile by changing the user_id
     conn = get_db_connection()
-    
     user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    
     if not user:
         flash('User not found!', 'danger')
         return redirect(url_for('dashboard'))
-    
-    # Get member details if user is a member
-    member = conn.execute('SELECT * FROM members WHERE email LIKE ?', 
-                         (f'%{user["username"]}%',)).fetchone()
-    
+    member = conn.execute('SELECT * FROM members WHERE email LIKE ?',
+                          (f"%{user['username']}%",)).fetchone()
     conn.close()
-    
     return render_template('profile.html', user=user, member=member)
 
 # ==========================================
@@ -153,11 +144,10 @@ def profile(user_id):
 def trainers():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
+
     conn = get_db_connection()
     trainers = conn.execute('SELECT * FROM trainers').fetchall()
     conn.close()
-    
     return render_template('trainers.html', trainers=trainers)
 
 # ==========================================
